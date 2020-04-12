@@ -55,11 +55,25 @@ import io.debezium.relational.history.FileDatabaseHistory;
     }
 
     /* package local */ Configurator truncateColumns(int length, String fullyQualifiedTableNames) {
-        return with(MySqlConnectorConfig.TRUNCATE_COLUMN(length), fullyQualifiedTableNames);
+        if (length <= 0) {
+            throw new IllegalArgumentException("The truncation length must be positive");
+        }
+        final Field field = Field.create("column.truncate.to." + length + ".chars")
+                .withValidation(Field::isInteger)
+                .withDescription("A comma-separated list of regular expressions matching fully-qualified names of columns that should "
+                        + "be truncated to " + length + " characters.");
+        return with(field, fullyQualifiedTableNames);
     }
 
     /* package local */ Configurator maskColumns(int length, String fullyQualifiedTableNames) {
-        return with(MySqlConnectorConfig.MASK_COLUMN(length), fullyQualifiedTableNames);
+        if (length <= 0) {
+            throw new IllegalArgumentException("The mask length must be positive");
+        }
+        final Field field = Field.create("column.mask.with." + length + ".chars")
+                .withValidation(Field::isInteger)
+                .withDescription("A comma-separated list of regular expressions matching fully-qualified names of columns that should "
+                        + "be masked with " + length + " asterisk ('*') characters.");
+        return with(field, fullyQualifiedTableNames);
     }
 
     /* package local */ Configurator excludeBuiltInTables() {

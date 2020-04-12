@@ -12,6 +12,7 @@ import java.sql.Types;
 import org.junit.Test;
 
 import io.debezium.relational.Column;
+import io.debezium.relational.ColumnEditor;
 import io.debezium.relational.ValueConverter;
 
 /**
@@ -20,13 +21,13 @@ import io.debezium.relational.ValueConverter;
  */
 public class MaskStringsTest {
 
-    private final Column column = Column.editor().name("col").jdbcType(Types.VARCHAR).create();
+    private final ColumnEditor columnEditor = Column.editor().name("col").jdbcType(Types.VARCHAR);
     private ValueConverter converter;
 
     @Test
     public void shouldMaskStringsWithAsterisks() {
         String maskValue = "*****";
-        converter = new MaskStrings(maskValue).create(column);
+        converter = new MaskStrings(maskValue).create(columnEditor.create());
         assertThat(converter.convert("1234567890").toString()).isEqualTo(maskValue);
         assertThat(converter.convert("123456").toString()).isEqualTo(maskValue);
         assertThat(converter.convert("12345").toString()).isEqualTo(maskValue);
@@ -39,11 +40,20 @@ public class MaskStringsTest {
 
     @Test
     public void shouldTransformSameInputsToSameResultsForCharsetType() {
-        converter = new MaskStrings("salt".getBytes(), "SHA-256").create(column);
+        converter = new MaskStrings("salt".getBytes(), "SHA-256").create(columnEditor.create());
         assertThat(converter.convert("hello")).isEqualTo("af5843a0f0e728ab0332c8888b6e1190bfb79e584f0d40538de8f10df6ef29c6");
         assertThat(converter.convert("hello")).isEqualTo("af5843a0f0e728ab0332c8888b6e1190bfb79e584f0d40538de8f10df6ef29c6");
         assertThat(converter.convert("world")).isEqualTo("4588e1f2dcdc7fefc1515d3acd5acb9033478eace68286f383c337b9ff4464a3");
         assertThat(converter.convert("world")).isEqualTo("4588e1f2dcdc7fefc1515d3acd5acb9033478eace68286f383c337b9ff4464a3");
+    }
+
+    @Test
+    public void shouldTransformSameInputsToSameResultsLimitedToColumnLength() {
+        converter = new MaskStrings("salt".getBytes(), "SHA-256").create(columnEditor.length(10).create());
+        assertThat(converter.convert("hello")).isEqualTo("af5843a0f0");
+        assertThat(converter.convert("hello")).isEqualTo("af5843a0f0");
+        assertThat(converter.convert("world")).isEqualTo("4588e1f2dc");
+        assertThat(converter.convert("world")).isEqualTo("4588e1f2dc");
     }
 
 }
